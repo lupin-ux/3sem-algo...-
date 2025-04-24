@@ -25,14 +25,14 @@ class HuffmanCoder:
         self._tree: Optional[HuffmanNode] = None
 
     def _build_frequency_table(self, data: str) -> Dict[str, int]:
-        """Построение таблицы частот символов"""
+        """Création d'une table de fréquence de symboles"""
         frequency = defaultdict(int)
         for char in data:
             frequency[char] += 1
         return frequency
 
     def _build_huffman_tree(self, frequency: Dict[str, int]) -> HuffmanNode:
-        """Построение дерева Хаффмана"""
+        """Construire un arbre Huffman"""
         heap = []
         for char, freq in frequency.items():
             heapq.heappush(heap, HuffmanNode(char=char, freq=freq))
@@ -46,7 +46,7 @@ class HuffmanCoder:
         return heapq.heappop(heap)
 
     def _build_codebook(self, node: HuffmanNode, current_code: str = "") -> None:
-        """Рекурсивное построение кодовой книги"""
+        """Génération récursive du livre de codes"""
         if node.char is not None:
             self._codebook[node.char] = current_code
             self._reverse_codebook[current_code] = node.char
@@ -56,7 +56,7 @@ class HuffmanCoder:
         self._build_codebook(node.right, current_code + "1")
 
     def encode(self, data: str) -> Tuple[str, Dict[str, str]]:
-        """Кодирование данных"""
+        """Codage des données"""
         if not data:
             return "", {}
 
@@ -70,11 +70,11 @@ class HuffmanCoder:
         return encoded_data, self._codebook
 
     def decode(self, encoded_data: str, codebook: Dict[str, str]) -> str:
-        """Декодирование данных"""
+        """decode des donnees"""
         if not encoded_data:
             return ""
 
-        # Строим обратную кодовую книгу для декодирования
+        # Construire un livre de code inverse pour le décodage
         reverse_codebook = {v: k for k, v in codebook.items()}
 
         current_code = ""
@@ -90,7 +90,7 @@ class HuffmanCoder:
 
 
 def read_file(filename: str) -> str:
-    """Чтение файла"""
+    """lecture du fichier"""
     if not os.path.exists(filename):
         raise FileNotFoundError(f"fichier {filename} inexistant!")
 
@@ -99,14 +99,14 @@ def read_file(filename: str) -> str:
 
 
 def write_file(filename: str, content: str) -> None:
-    """Запись в файл"""
+    """ecriture dans le fichier"""
     with open(filename, 'w', encoding='utf-8') as file:
         file.write(content)
 
 
 def save_compressed(encoded_data: str, codebook: Dict[str, str], output_file: str) -> None:
-    """Сохранение сжатых данных и кодовой книги"""
-    # Преобразуем битовую строку в байты
+"""Enregistrer les données compressées et le livre de codes"""
+# Construire un livre de code inverse pour le décodage
     padding = 8 - len(encoded_data) % 8
     encoded_data += '0' * padding
 
@@ -114,8 +114,7 @@ def save_compressed(encoded_data: str, codebook: Dict[str, str], output_file: st
     for i in range(0, len(encoded_data), 8):
         byte = encoded_data[i:i + 8]
         bytes_data.append(int(byte, 2))
-
-    # Сохраняем метаданные (кодовую книгу и padding)
+# Conserver les métadonnées (codebook et padding)
     metadata = {
         'codebook': codebook,
         'padding': padding
@@ -127,7 +126,7 @@ def save_compressed(encoded_data: str, codebook: Dict[str, str], output_file: st
 
 
 def load_compressed(input_file: str) -> Tuple[str, Dict[str, str]]:
-    """Загрузка сжатых данных"""
+    """Téléchargement de données compressées"""
     with open(input_file, 'rb') as file:
         metadata_line = file.readline()
         metadata = json.loads(metadata_line.decode('utf-8'))
@@ -145,32 +144,33 @@ def load_compressed(input_file: str) -> Tuple[str, Dict[str, str]]:
 
 
 def compress_file(input_file: str, output_file: str) -> None:
-    """Сжатие файла"""
+    """compression du fichier"""
     data = read_file(input_file)
     coder = HuffmanCoder()
     encoded_data, codebook = coder.encode(data)
 
-    # Сохраняем сжатые данные
+    # conservons les donnees compresses
     save_compressed(encoded_data, codebook, output_file)
 
-    # Проверяем степень сжатия
+    # verification du taux de compression
     original_size = os.path.getsize(input_file)
     compressed_size = os.path.getsize(output_file)
-    print(f"Исходный размер: {original_size} байт")
-    print(f"Сжатый размер: {compressed_size} байт")
-    print(f"Степень сжатия: {original_size / compressed_size:.2f}x")
+    print(f"taille d_entree: {original_size} байт")
+    print(f"taille compressee: {compressed_size} байт")
+    print(f"Taux de compression: {original_size / compressed_size:.2f}x")
 
 
 def decompress_file(input_file: str, output_file: str) -> None:
-    """Распаковка файла"""
+"""Décompresser le fichier"""
+    
     encoded_data, codebook = load_compressed(input_file)
     coder = HuffmanCoder()
     decoded_data = coder.decode(encoded_data, codebook)
 
-    # Сохраняем распакованные данные
+    # Enregistrer les données décompressées
     write_file(output_file, decoded_data)
 
-    # Проверяем корректность
+   # Vérifier l'exactitude
     print("Декодирование завершено. Проверьте файл:", output_file)
 
 
