@@ -1,0 +1,4 @@
+CODE HAFFMAN 
+Vraiment tres simple a utiliser. 
+pour 'Codage (compression) d'un fichier' (dans le terminal apres installation du code sur votre systeme) : python huffman.py encode input_file compressed.huf
+pour 'Décodage (décompression) d'un fichier': python huffman.py decode compressed.huf output.txt
