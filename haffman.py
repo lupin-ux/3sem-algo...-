@@ -1,5 +1,6 @@
 import heapq
 import os
+import struct
 import json
 from collections import defaultdict
 from typing import Dict, Tuple, Optional
@@ -103,7 +104,7 @@ def write_file(filename: str, content: str) -> None:
     with open(filename, 'w', encoding='utf-8') as file:
         file.write(content)
 
-
+'''
 def save_compressed(encoded_data: str, codebook: Dict[str, str], output_file: str) -> None:
 """Enregistrer les données compressées et le livre de codes"""
 # Construire un livre de code inverse pour le décodage
@@ -141,6 +142,60 @@ def load_compressed(input_file: str) -> Tuple[str, Dict[str, str]]:
             encoded_data = encoded_data[:-padding]
 
         return encoded_data, codebook
+'''
+
+# === Nouvelle version optimisée ===
+def save_compressed(output_file, compressed_data, freq, original_size, compression_time):
+    """Version optimisée avec stockage binaire des fréquences"""
+    # Pack metadata
+    metadata = struct.pack('>QIf', 
+                         compressed_data.bit_length(),  # 8 bytes for bits length
+                         original_size,                # 4 bytes
+                         compression_time)             # 4 bytes
+    
+    # Pack frequencies
+    chars = sorted(freq.keys())
+    freq_header = struct.pack('>H', len(chars))  # 2 bytes
+    
+    freq_body = bytearray()
+    for char in chars:
+        char_bytes = char.encode('utf-8')
+        freq_body.extend([
+            len(char_bytes),        # 1 byte
+            *char_bytes,           # 1-4 bytes
+            *struct.pack('>H', freq[char])  # 2 bytes
+        ])
+    
+    # Write to file
+    with open(output_file, 'wb') as f:
+        f.write(metadata)          # 16 bytes
+        f.write(freq_header)       # 2 bytes
+        f.write(freq_body)         # Variable length
+        f.write(compressed_data.to_bytes(
+            (compressed_data.bit_length() + 7) // 8, 'big'))
+
+def load_compressed(input_file):
+    """Version optimisée de chargement"""
+    with open(input_file, 'rb') as f:
+        # Read metadata (16 bytes)
+        metadata = f.read(16)
+        bit_length, original_size, compression_time = struct.unpack('>QIf', metadata)
+        
+        # Read frequencies
+        (num_chars,) = struct.unpack('>H', f.read(2))
+        
+        freq = {}
+        for _ in range(num_chars):
+            char_len = ord(f.read(1))
+            char = f.read(char_len).decode('utf-8')
+            freq[char] = struct.unpack('>H', f.read(2))[0]
+        
+        # Read compressed data
+        byte_length = (bit_length + 7) // 8
+        compressed_data = int.from_bytes(f.read(byte_length), 'big')
+    
+    return compressed_data, freq, original_size, compression_time
+
 
 
 def compress_file(input_file: str, output_file: str) -> None:
